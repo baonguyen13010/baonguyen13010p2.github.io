@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Friday Analytics Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --accent-color: #00d2ff;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            height: 100%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #343a40;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 12px;
+            font-size: 1.25rem;
+        }
+        
+        .data-source {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 15px;
+            font-style: italic;
+        }
+        
+        .dashboard-description {
+            background-color: #e9f7fe;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        
+        .nav-tabs .nav-link {
+            color: #495057;
+            font-weight: 500;
+            border: none;
+            padding: 10px 20px;
+            margin-right: 5px;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background-color: transparent;
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .data-refresh-btn {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .data-refresh-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-chart-line"></i> Black Friday Analytics Dashboard</h1>
+                    <p class="mb-0">Comprehensive analysis of sales performance, customer behavior, and discount effectiveness</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-inline-block bg-white text-dark p-2 rounded">
+                        <small>Last Updated: <span id="current-date"></span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Description -->
+        <div class="dashboard-description">
+            <div class="row">
+                <div class="col-md-9">
+                    <p class="mb-0">
+                        This dashboard visualizes synthetic Black Friday sales data across five key dimensions. 
+                        Each chart uses a different visualization strategy to provide unique insights into customer behavior and sales performance.
+                    </p>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="data-refresh-btn" id="refresh-data">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Dashboard Overview</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">Data Details</button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="dashboardTabContent">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <!-- First Row: Two charts with different sizes -->
+                <div class="row">
+                    <!-- Sales Performance - Large chart -->
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-shopping-cart"></i> Sales Performance by Product Category</h3>
+                            <canvas id="salesPerformanceChart"></canvas>
+                            <div class="data-source">Data source: sales_performance_black_friday_subset.csv (120 records)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Value - Small chart -->
+                    <div class="col-lg-4">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-crown"></i> Customer Value by Prime Membership</h3>
+                            <canvas id="customerValueChart"></canvas>
+                            <div class="data-source">Data source: customer_value_black_friday_subset.csv (120 records)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Second Row: Three charts with different sizes -->
+                <div class="row">
+                    <!-- Discount Effectiveness - Medium chart -->
+                    <div class="col-lg-6">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-percentage"></i> Discount Effectiveness Analysis</h3>
+                            <canvas id="discountEffectivenessChart"></canvas>
+                            <div class="data-source">Data source: discount_effectiveness_black_friday_subset.csv (120 records)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Demographic Analysis - Small chart -->
+                    <div class="col-lg-3">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-users"></i> Demographic Analysis</h3>
+                            <canvas id="demographicAnalysisChart"></canvas>
+                            <div class="data-source">Data source: demographic_analysis_black_friday_subset.csv (120 records)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Satisfaction - Small chart -->
+                    <div class="col-lg-3">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-star"></i> Customer Satisfaction</h3>
+                            <canvas id="customerSatisfactionChart"></canvas>
+                            <div class="data-source">Data source: customer_satisfaction_black_friday_subset.csv (120 records)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Data Details Tab -->
+            <div class="tab-pane fade" id="details" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <h3 class="chart-title"><i class="fas fa-database"></i> Data Sources Information</h3>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Dataset</th>
+                                                <th>Records</th>
+                                                <th>Columns</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Sales Performance</td>
+                                                <td>120</td>
+                                                <td>Product_Category, Purchase_Amount_USD</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Customer Value (LTV)</td>
+                                                <td>120</td>
+                                                <td>Is_Prime_Member, Purchase_Amount_USD</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Discount Effectiveness</td>
+                                                <td>120</td>
+                                                <td>Discount_Percent, Purchase_Amount_USD</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Demographic Analysis</td>
+                                                <td>120</td>
+                                                <td>Age_Group, Gender</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Customer Satisfaction</td>
+                                                <td>120</td>
+                                                <td>Review_Rating, Product_Category</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Chart Types Used</h5>
+                                    <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Bar Chart
+                                            <span class="badge bg-primary rounded-pill">Sales Performance</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Pie Chart
+                                            <span class="badge bg-primary rounded-pill">Customer Value</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Line Chart
+                                            <span class="badge bg-primary rounded-pill">Discount Effectiveness</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Radar Chart
+                                            <span class="badge bg-primary rounded-pill">Demographic Analysis</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Stacked Bar Chart
+                                            <span class="badge bg-primary rounded-pill">Customer Satisfaction</span>
+                                        </li>
+                                    </ul>
+                                    <div class="mt-4">
+                                        <h5>Key Insights</h5>
+                                        <ul>
+                                            <li>Electronics is the top-performing category</li>
+                                            <li>Prime members spend 75% more on average</li>
+                                            <li>30-40% discounts yield the highest purchase amounts</li>
+                                            <li>26-35 age group is the most active demographic</li>
+                                            <li>Books receive the highest satisfaction ratings</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>Black Friday Analytics Dashboard | Synthetic Data Generated for Demonstration | Built with Bootstrap & Chart.js</p>
+            <p class="small">This dashboard uses five different chart types with varying column configurations to optimize data visualization.</p>
+        </div>
+    </div>
+
+    <!-- Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Set current date
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Data Getter - Simulates fetching data from CSV files
+        const dataGetter = {
+            getSalesPerformanceData: function() {
+                // Simulated data from sales_performance_black_friday_subset.csv
+                return {
+                    categories: ['Electronics', 'Clothing', 'Home & Kitchen', 'Toys', 'Books', 'Beauty'],
+                    sales: [24500, 18700, 15600, 9800, 5400, 7200]
+                };
+            },
+            getCustomerValueData: function() {
+                // Simulated data from customer_value_black_friday_subset.csv
+                return {
+                    labels: ['Prime Members', 'Non-Prime Members'],
+                    values: [156.75, 89.30],
+                    counts: [78, 42]
+                };
+            },
+            getDiscountEffectivenessData: function() {
+                // Simulated data from discount_effectiveness_black_friday_subset.csv
+                return {
+                    discountRanges: ['0-10%', '11-20%', '21-30%', '31-40%', '41-50%', '51%+'],
+                    avgPurchaseAmounts: [85.20, 112.50, 145.80, 168.90, 192.30, 156.40],
+                    transactionCounts: [45, 38, 52, 41, 29, 15]
+                };
+            },
+            getDemographicAnalysisData: function() {
+                // Simulated data from demographic_analysis_black_friday_subset.csv
+                return {
+                    ageGroups: ['18-25', '26-35', '36-45', '46-55', '56+'],
+                    maleCounts: [22, 35, 28, 18, 12],
+                    femaleCounts: [28, 32, 25, 15, 10]
+                };
+            },
+            getCustomerSatisfactionData: function() {
+                // Simulated data from customer_satisfaction_black_friday_subset.csv
+                return {
+                    categories: ['Electronics', 'Clothing', 'Home & Kitchen', 'Toys', 'Books', 'Beauty'],
+                    ratings: [
+                        [4, 12, 18, 25, 41], // Electronics: 1-5 star distribution
+                        [8, 15, 22, 30, 25], // Clothing
+                        [5, 10, 28, 32, 25], // Home & Kitchen
+                        [3, 8, 15, 35, 39],  // Toys
+                        [2, 5, 12, 28, 53],  // Books
+                        [6, 12, 20, 30, 32]  // Beauty
+                    ]
+                };
+            }
+        };
+
+        // Chart instances storage
+        let chartInstances = {
+            salesPerformanceChart: null,
+            customerValueChart: null,
+            discountEffectivenessChart: null,
+            demographicAnalysisChart: null,
+            customerSatisfactionChart: null
+        };
+
+        // Chart Strategies - Each chart uses a different visualization approach
+        const chartStrategies = {
+            // Bar Chart for Sales Performance
+            renderSalesPerformance: function() {
+                const data = dataGetter.getSalesPerformanceData();
+                const ctx = document.getElementById('salesPerformanceChart').getContext('2d');
+                
+                if (chartInstances.salesPerformanceChart) {
+                    chartInstances.salesPerformanceChart.destroy();
+                }
+                
+                chartInstances.salesPerformanceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.categories,
+                        datasets: [{
+                            label: 'Sales (USD)',
+                            data: data.sales,
+                            backgroundColor: [
+                                'rgba(106, 17, 203, 0.7)',
+                                'rgba(37, 117, 252, 0.7)',
+                                'rgba(0, 210, 255, 0.7)',
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(255, 159, 64, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(106, 17, 203, 1)',
+                                'rgba(37, 117, 252, 1)',
+                                'rgba(0, 210, 255, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 2,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Sales: $${context.raw.toLocaleString()}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Sales (USD)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            // Pie Chart for Customer Value
+            renderCustomerValue: function() {
+                const data = dataGetter.getCustomerValueData();
+                const ctx = document.getElementById('customerValueChart').getContext('2d');
+                
+                if (chartInstances.customerValueChart) {
+                    chartInstances.customerValueChart.destroy();
+                }
+                
+                chartInstances.customerValueChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.values,
+                            backgroundColor: [
+                                'rgba(106, 17, 203, 0.7)',
+                                'rgba(37, 117, 252, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(106, 17, 203, 1)',
+                                'rgba(37, 117, 252, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: $${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            // Line Chart for Discount Effectiveness
+            renderDiscountEffectiveness: function() {
+                const data = dataGetter.getDiscountEffectivenessData();
+                const ctx = document.getElementById('discountEffectivenessChart').getContext('2d');
+                
+                if (chartInstances.discountEffectivenessChart) {
+                    chartInstances.discountEffectivenessChart.destroy();
+                }
+                
+                chartInstances.discountEffectivenessChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.discountRanges,
+                        datasets: [{
+                            label: 'Average Purchase Amount (USD)',
+                            data: data.avgPurchaseAmounts,
+                            backgroundColor: 'rgba(37, 117, 252, 0.1)',
+                            borderColor: 'rgba(37, 117, 252, 1)',
+                            borderWidth: 3,
+                            tension: 0.3,
+                            fill: true,
+                            pointBackgroundColor: 'rgba(37, 117, 252, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Avg Purchase: $${context.raw}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Average Purchase Amount (USD)'
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Discount Range'
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            // Radar Chart for Demographic Analysis
+            renderDemographicAnalysis: function() {
+                const data = dataGetter.getDemographicAnalysisData();
+                const ctx = document.getElementById('demographicAnalysisChart').getContext('2d');
+                
+                if (chartInstances.demographicAnalysisChart) {
+                    chartInstances.demographicAnalysisChart.destroy();
+                }
+                
+                chartInstances.demographicAnalysisChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: data.ageGroups,
+                        datasets: [
+                            {
+                                label: 'Male',
+                                data: data.maleCounts,
+                                backgroundColor: 'rgba(37, 117, 252, 0.2)',
+                                borderColor: 'rgba(37, 117, 252, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(37, 117, 252, 1)',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            },
+                            {
+                                label: 'Female',
+                                data: data.femaleCounts,
+                                backgroundColor: 'rgba(106, 17, 203, 0.2)',
+                                borderColor: 'rgba(106, 17, 203, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(106, 17, 203, 1)',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    display: true,
+                                    color: 'rgba(0,0,0,0.1)'
+                                },
+                                suggestedMin: 0,
+                                suggestedMax: 40,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                },
+                                pointLabels: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            },
+            
+            // Stacked Bar Chart for Customer Satisfaction
+            renderCustomerSatisfaction: function() {
+                const data = dataGetter.getCustomerSatisfactionData();
+                const ctx = document.getElementById('customerSatisfactionChart').getContext('2d');
+                
+                if (chartInstances.customerSatisfactionChart) {
+                    chartInstances.customerSatisfactionChart.destroy();
+                }
+                
+                // Prepare datasets for each rating (1-5 stars)
+                const datasets = [];
+                const colors = [
+                    'rgba(255, 99, 132, 0.7)',  // 1 star - red
+                    'rgba(255, 159, 64, 0.7)',  // 2 stars - orange
+                    'rgba(255, 205, 86, 0.7)',  // 3 stars - yellow
+                    'rgba(75, 192, 192, 0.7)',  // 4 stars - teal
+                    'rgba(37, 117, 252, 0.7)'   // 5 stars - blue
+                ];
+                
+                for (let i = 0; i < 5; i++) {
+                    const ratingData = data.ratings.map(category => category[i]);
+                    datasets.push({
+                        label: `${i+1} Star${i === 0 ? '' : 's'}`,
+                        data: ratingData,
+                        backgroundColor: colors[i],
+                        borderColor: colors[i].replace('0.7', '1'),
+                        borderWidth: 1
+                    });
+                }
+                
+                chartInstances.customerSatisfactionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.categories,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Reviews'
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.05)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 15
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Function to refresh all charts with new data
+        function refreshDashboardData() {
+            // Update date
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Re-render all charts
+            chartStrategies.renderSalesPerformance();
+            chartStrategies.renderCustomerValue();
+            chartStrategies.renderDiscountEffectiveness();
+            chartStrategies.renderDemographicAnalysis();
+            chartStrategies.renderCustomerSatisfaction();
+            
+            // Show notification
+            const btn = document.getElementById('refresh-data');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Data Refreshed!';
+            btn.style.opacity = '0.7';
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.opacity = '1';
+            }, 1500);
+        }
+
+        // Initialize all charts when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Bootstrap tabs
+            const triggerTabList = [].slice.call(document.querySelectorAll('#dashboardTabs button'));
+            triggerTabList.forEach(function (triggerEl) {
+                const tabTrigger = new bootstrap.Tab(triggerEl);
+                triggerEl.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    tabTrigger.show();
+                });
+            });
+            
+            // Render all charts
+            chartStrategies.renderSalesPerformance();
+            chartStrategies.renderCustomerValue();
+            chartStrategies.renderDiscountEffectiveness();
+            chartStrategies.renderDemographicAnalysis();
+            chartStrategies.renderCustomerSatisfaction();
+            
+            // Add event listener to refresh button
+            document.getElementById('refresh-data').addEventListener('click', refreshDashboardData);
+        });
+    </script>
+</body>
+</html>
